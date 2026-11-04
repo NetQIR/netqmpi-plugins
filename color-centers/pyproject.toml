@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "netqmpi-colorcenters"
+version = "0.1.0.dev0"
+description = "NV and SnV colour-centre QPUs with heralded double-click links, as a NetQMPI simulation plugin (NetQASM/SquidASM backend)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    # NetQMPI with simulation plugins (main since 9221dfe; not in a release yet).
+    "netqmpi>=0.3.1",
+    # SquidASM and NetSquid come from the private index (pypi.netsquid.org).
+    # The version floor keeps pip off the empty `squidasm` 0.0.1 on PyPI.
+    "squidasm>=0.13.6,<0.14",
+    "netsquid>=1.1,<2",
+    "netsquid-magic>=16,<17",
+    "numpy",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+# Short names NetQMPI can resolve once NetQIR/netqmpi#29 lands
+# (`--plugin nv_2026`). Until then use the full "module:callable" form.
+[project.entry-points."netqmpi.plugins"]
+nv_2026 = "netqmpi_colorcenters:nv_2026"
+snv_2026 = "netqmpi_colorcenters:snv_2026"
+color_centers = "netqmpi_colorcenters:simulation"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+netqmpi_colorcenters = ["presets/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

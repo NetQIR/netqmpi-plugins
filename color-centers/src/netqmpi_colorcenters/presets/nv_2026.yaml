@@ -1,0 +1,51 @@
+# Preset nv_2026: NV-centre QPUs with the COMPUTAEX 2026 parameters.
+#
+# The plugin_config of netqmpi_colorcenters:simulation, copied key by key from
+# NVParameterSet2026COMPUTAEX (nv_2026.py) of the original NetSquid emulator:
+# device = NVProcessor2026 (processors.py), link = Entangler (entanglement.py).
+# Select it as plugin "netqmpi_colorcenters:nv_2026"; its plugin_config then only
+# carries overrides of these values.
+#
+# Times in ns. Gate errors are the depolar_rate of a time-independent
+# depolarising channel, (4/3)(1 - F) for a gate of fidelity F.
+# YAML note: write exponents with a sign (3.6e+12); PyYAML reads 3.6e12 as text.
+
+device:
+  # Coherence times
+  electron_T1: 3.6e+12                           # Joas et al. (2024)
+  electron_T2: 1.58e+9                           # Abobeih et al. (2018)
+  carbon_T1: 3.6e+13
+  carbon_T2: 3.7e+10                             # Bartling et al. (2025)
+
+  # Gate and initialisation errors
+  electron_init_depolar_prob: 0.025333333333333354          # F = 0.981
+  electron_single_qubit_depolar_prob: 0.0009333333333333785 # F = 0.9993
+  carbon_init_depolar_prob: 0.16799999999999998             # F = 0.874
+  carbon_z_rot_depolar_prob: 0.0008000000000000599          # F = 0.9994, every carbon gate
+  ec_gate_depolar_prob: 0.0008000000000000599               # F = 0.9994
+  magical_swap_gate_depolar_prob: 0.017333333333333346      # F = 0.987
+
+  # Readout: probability that 0 reads as 1, and 1 as 0
+  prob_error_0: 0.001
+  prob_error_1: 0.01
+
+  # Durations
+  electron_init_duration: 2.0e+3
+  electron_single_qubit_duration: 144.0          # Bartling et al. (2025)
+  carbon_init_duration: 310.0e+3
+  carbon_z_rot_duration: 100.0e+3                # Bartling et al. (2025)
+  carbon_single_qubit_duration: 3.0e+3           # carbon H, X and X rotation
+  ec_two_qubit_gate_duration: 700.0e+3
+  measure_duration: 190.0e+3
+  magical_swap_gate_duration: 1.00001e+6
+
+link:                  # Entangler in entanglement.py, from NVParameterSet2026COMPUTAEX
+  length: 1.0                                  # km: MiddleHeraldedConnection(length=1), station in the middle
+  c: 206753.41931034482                        # km/s
+  p_loss_lengths_with_conversion: 0.5          # dB/km
+  photon_emission_delay: 8392.0                # Iuliano et al. (2026)
+  emission_fidelity: 0.77                      # Iuliano et al. (2026)
+  total_detection_eff: 0.0011914275284602635   # zero-phonon x collection x detector x fibre
+  prob_dark_count: 7.000000024071085e-09       # 1 Hz over a 7 ns window
+  visibility: 0.9
+  product_tau_decay_delta_w: 0.07886025879041099   # nuclear dephasing per attempt
