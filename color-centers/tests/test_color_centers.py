@@ -25,6 +25,12 @@ from netqmpi_colorcenters import link  # noqa: E402
 
 PLUGIN = "netqmpi_colorcenters:simulation"
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
+
+
+def _installed(name):
+    from netqmpi import plugins
+    return any(p.name == name and p.distribution == "netqmpi-colorcenters"
+               for p in plugins.installed())
 SHOTS = 3
 
 
@@ -51,6 +57,7 @@ def run_app(source, ranks, tmp_path, num_qubits=3, device=None, link_block=None)
         executor.run(executor.build_apps(str(app), ranks))
     finally:
         Environment.__init__ = original
+    run_app.metrics = captured[-1].comm.metrics if captured else {}
     return {env.comm.rank: dict(env.comm.results)
             for env in sorted(captured, key=lambda e: e.comm.rank)}
 
@@ -68,12 +75,13 @@ def test_the_presets_load(name):
 
 @pytest.mark.parametrize("name", ["nv_2026", "snv_2026"])
 def test_the_example_configs_select_the_presets(name):
+    if not _installed(name):
+        pytest.skip("needs the package installed (pip install -e .) for its entry points")
     config = NetQASMRunConfig.from_dict(
         read_config_block(str(EXAMPLES / f"{name}.yaml"), "netqasm"))
-    assert config.plugin == f"netqmpi_colorcenters:{name}"
+    assert config.plugin == name
     assert config.plugin_config is None
-    # What the platform was characterised with, until NetQMPI reads
-    # run_defaults itself (NetQIR/netqmpi#29).
+    # Not set in the file: they come from the preset's run_defaults.
     preset = getattr(color_centers, name)
     assert config.formalism.value == preset.run_defaults["formalism"]
     assert config.num_qubits == preset.run_defaults["num_qubits"]
@@ -116,6 +124,52 @@ def test_yaml_exponents_without_sign_still_read_as_numbers():
 def test_bad_plugin_config_is_refused(block, match):
     with pytest.raises(ValueError, match=match):
         color_centers.simulation(block)
+
+
+# ----------------------------------------------------------------------
+# The NetQMPI plugin protocol: run_defaults, configure, backends
+# ----------------------------------------------------------------------
+
+needs_install = pytest.mark.skipif(
+    not _installed("nv_2026"),
+    reason="needs the package installed (pip install -e .) for its entry points")
+
+
+@needs_install
+@pytest.mark.parametrize("name", ["nv_2026", "snv_2026"])
+def test_a_short_name_brings_the_platform_run_settings(name):
+    config = NetQASMRunConfig.from_dict({"plugin": name})
+    assert config.formalism.value == "dm"
+    assert config.num_qubits == 3
+
+
+@needs_install
+def test_the_user_still_overrides_run_defaults():
+    assert NetQASMRunConfig.from_dict({"plugin": "nv_2026", "num_qubits": 5}).num_qubits == 5
+
+
+def test_every_entry_point_declares_the_netqasm_backend():
+    for plugin in (color_centers.simulation, color_centers.nv_2026, color_centers.snv_2026):
+        assert plugin.backends == ("netqasm",)
+
+
+@pytest.mark.parametrize("settings, match", [
+    ({"hardware": "nv"}, "hardware"),
+    ({"formalism": "stab"}, "stab"),
+    ({"t1": 1e9}, "t1/t2"),
+    ({"gate_fidelity": 0.99}, "gate_fidelity"),
+    ({"link_fidelity": 0.9}, "link_fidelity"),
+    ({"plugin_config": {"device": {"electron_t2": 1.0}}}, "electron_t2"),
+])
+def test_configure_refuses_what_the_plugin_would_ignore(settings, match):
+    with pytest.raises(ValueError, match=match):
+        NetQASMRunConfig(**{"plugin": "netqmpi_colorcenters:nv_2026", **settings})
+
+
+def test_link_fidelity_is_fine_without_the_heralded_link():
+    config = NetQASMRunConfig(plugin="netqmpi_colorcenters:nv_2026", link_fidelity=0.9,
+                              plugin_config={"link": None})
+    assert config.link_fidelity == 0.9
 
 
 # ----------------------------------------------------------------------
@@ -212,3 +266,105 @@ def test_only_electrons_are_entangled(link_block, tmp_path, monkeypatch):
 
     assert results[1] == {"11": SHOTS}
     assert delivered and set(delivered) == {color_centers.ELECTRON}
+
+
+# ----------------------------------------------------------------------
+# Telegates: expose/unexpose on colour centres
+# ----------------------------------------------------------------------
+
+#: A perfect heralded link: no loss, no dark counts, perfect visibility.
+IDEAL_LINK = {"length": 1.0, "photon_emission_delay": 1e3}
+LINKS = pytest.mark.parametrize("link_block", [None, IDEAL_LINK],
+                                ids=["NetQMPI link", "heralded link"])
+
+REMOTE_CNOT = """
+    def main(env):
+        comm = env.comm
+        with comm:
+            circuit = env.create_circuit(num_qubits=1, num_clbits=1)
+            if comm.rank == 0 and {control}:
+                circuit.x(0)
+            if comm.rank == 1 and {target}:
+                circuit.x(0)
+            control = comm.expose(circuit, 0, [1], root=0)
+            if comm.rank == 1:
+                circuit.cx(control, 0)
+            comm.unexpose(circuit, [1], root=0)
+            circuit.measure(0, 0)
+"""
+
+
+@LINKS
+@pytest.mark.parametrize("control, target", [(0, 0), (0, 1), (1, 0), (1, 1)])
+def test_a_telegate_is_a_remote_cnot(control, target, link_block, tmp_path):
+    # The exposed control sits on the receiver's electron, its target on a
+    # nuclear spin; on the root the pair's half is the electron and the data
+    # qubit a nuclear spin, so both CNOT decompositions are exercised.
+    source = REMOTE_CNOT.format(control=control, target=target)
+    results = run_app(source, 2, tmp_path, link_block=link_block)
+    assert results[0] == {str(control): SHOTS}
+    assert results[1] == {str(control ^ target): SHOTS}
+
+
+PHASE_KICKBACK = """
+    def main(env):
+        comm = env.comm
+        with comm:
+            circuit = env.create_circuit(num_qubits=1, num_clbits=1)
+            if comm.rank == 0:
+                circuit.h(0)                     # |+>
+            control = comm.expose(circuit, 0, [1], root=0)
+            if comm.rank == 1:
+                circuit.cz(control, 0)           # target |0>: no effect
+            comm.unexpose(circuit, [1], root=0)
+            if comm.rank == 0:
+                circuit.h(0)                     # |+> -> 0, |-> -> 1
+            circuit.measure(0, 0)
+"""
+
+
+@LINKS
+def test_unexpose_gives_the_control_back_with_its_phase(link_block, tmp_path):
+    # The receiver's X-basis outcome is random; only the root's Z correction
+    # makes the control |+> again, so a missing or wrong correction reads 1
+    # in about half the shots.
+    results = run_app(PHASE_KICKBACK, 2, tmp_path, link_block=link_block)
+    assert results[0] == {"0": SHOTS}
+
+
+FAN_OUT = """
+    def main(env):
+        comm = env.comm
+        with comm:
+            circuit = env.create_circuit(num_qubits=1, num_clbits=1)
+            if comm.rank == 0:
+                circuit.x(0)
+            control = comm.expose(circuit, 0, [1, 2], root=0)
+            if comm.rank != 0:
+                circuit.cx(control, 0)
+            comm.unexpose(circuit, [1, 2], root=0)
+            circuit.measure(0, 0)
+"""
+
+
+@LINKS
+def test_one_root_exposes_to_two_receivers(link_block, tmp_path):
+    results = run_app(FAN_OUT, 3, tmp_path, link_block=link_block)
+    assert results == {0: {"1": SHOTS}, 1: {"1": SHOTS}, 2: {"1": SHOTS}}
+
+
+def test_the_heralded_link_reports_its_pairs(tmp_path):
+    # Two teleportations per shot over a perfect heralded link: every pair is
+    # counted, and each is a perfect Bell state.
+    run_app(TWO_TELEPORTS, 2, tmp_path, link_block=IDEAL_LINK)
+    link_metrics = run_app.metrics["plugin"]
+    assert link_metrics["epr_pairs"] == 2 * SHOTS
+    assert link_metrics["epr_attempts"] >= link_metrics["epr_pairs"]
+    assert link_metrics["pair_fidelity"] == pytest.approx(1.0)
+    assert len(link_metrics["pair_time_ns"]) == 2 * SHOTS
+    assert len(run_app.metrics["netqmpi"]["sim_time_ns"]) == SHOTS
+
+
+def test_netqmpi_links_report_nothing_of_ours(tmp_path):
+    run_app(TWO_TELEPORTS, 2, tmp_path)
+    assert "plugin" not in run_app.metrics

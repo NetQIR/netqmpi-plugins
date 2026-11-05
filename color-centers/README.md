@@ -13,7 +13,7 @@ that repository.
 ```
 color-centers/
 ├── src/netqmpi_colorcenters/
-│   ├── __init__.py         # entry points: simulation, nv_2026, snv_2026
+│   ├── __init__.py         # entry points: nv_2026, snv_2026, color_centers
 │   ├── parameters.py       # the device and link blocks of plugin_config
 │   ├── device.py           # the processor: processors.py
 │   ├── executor.py         # gate by gate: primitives.py
@@ -22,60 +22,97 @@ color-centers/
 ├── examples/
 │   ├── dega.py             # DEGA.py (2-bit chunks), one rank per QPU
 │   ├── teleport.py         # qsend/qrecv between two QPUs over the heralded link
-│   ├── nv_2026.yaml
+│   ├── telegate.py         # remote CNOT with expose/unexpose, plus link metrics
+│   ├── nv_2026.yaml        # optional config files: shots and overrides
 │   └── snv_2026.yaml
 └── tests/
 ```
 
 ## Running
 
-You need NetQMPI with plugin support (`main`, not in a release yet),
-SquidASM 0.13.6 and NetQASM 2.0, all of which the `netqasm2` environment has:
+You need NetQMPI `main` with plugin support (not in a release yet), SquidASM
+0.13.6 and NetQASM 2.0, all of which the `netqasm2` environment has. Install
+the plugin so NetQMPI finds it by name, from any directory:
 
 ```bash
 conda activate netqasm2
 pip install -e . --no-deps
-netqmpi -n 2 examples/dega.py --netqasm --config examples/nv_2026.yaml
-TELEPORT_STATE=+ netqmpi -n 2 examples/teleport.py --netqasm --config examples/snv_2026.yaml
+netqmpi --list-plugins
+
+netqmpi -n 2 examples/dega.py --netqasm --plugin nv_2026
+TELEPORT_STATE=+ netqmpi -n 2 examples/teleport.py --netqasm --plugin snv_2026
+netqmpi -n 2 examples/telegate.py --netqasm --plugin nv_2026 --metrics metrics.json
 python -m pytest
 ```
 
-If you would rather not install it, prefix the commands with `PYTHONPATH=$PWD/src`.
-
 SquidASM simulates the whole network once per shot, which takes about half a
-second per shot with two ranks, even on NV, where each pair takes ~10 s of
-simulated time. On this backend only the last rank gets its counts inside
-`main`, so only that rank prints them.
+second per shot with two ranks. That holds even on NV, where a pair takes
+~1.6 million attempts, about 20 s of simulated time. On this backend only the
+last rank gets its counts and metrics inside `main`, so only that rank prints
+them.
 
 ## Entry points
 
-| Entry point | `plugin_config` |
-|---|---|
-| `netqmpi_colorcenters:nv_2026` | Optional overrides of the NV preset (`NVParameterSet2026COMPUTAEX`) |
-| `netqmpi_colorcenters:snv_2026` | Optional overrides of the SnV preset (`SnVParameterSet2026COMPUTAEX`) |
-| `netqmpi_colorcenters:simulation` | Every parameter: a `device` block and an optional `link` block |
+| Short name | Target | `plugin_config` |
+|---|---|---|
+| `nv_2026` | `netqmpi_colorcenters:nv_2026` | Optional overrides of the NV preset (`NVParameterSet2026COMPUTAEX`) |
+| `snv_2026` | `netqmpi_colorcenters:snv_2026` | Optional overrides of the SnV preset (`SnVParameterSet2026COMPUTAEX`) |
+| `color_centers` | `netqmpi_colorcenters:simulation` | Every parameter: a `device` block and an optional `link` block |
+
+The presets set the run settings the platform was characterised with
+(`run_defaults`): `formalism: dm`, and `num_qubits: 3`, an electron and two
+nuclear spins. `color_centers` sets only `formalism: dm`. Anything in the
+config file or on the command line still wins.
 
 With a preset, an override replaces single values, and `link: null` drops the
-heralded link so NetQMPI's own links are used:
+heralded link so NetQMPI's own links are used. Pass the overrides with
+`--plugin-config FILE`, or in the config file:
 
 ```yaml
 netqasm:
-  formalism: dm          # what the platform was characterised with
-  num_qubits: 3          # electron + 2 nuclear spins
-  plugin: netqmpi_colorcenters:nv_2026
+  plugin: nv_2026
   plugin_config:
     device:
       electron_T2: 2.0e+9
 ```
 
-NetQMPI cannot yet take `formalism` and `num_qubits` from the plugin, so set
-them in the config file. Each preset records them in `run_defaults` for when
-it can ([NetQIR/netqmpi#29](https://github.com/NetQIR/netqmpi/issues/29)).
-
 Parameter keys have the same names as the attributes of the parameter sets in
 `nv_2026.py` and `snv_2026.py`, and the presets copy their values exactly.
-With `simulation`, any key you leave out takes its perfect value: no noise
+With `color_centers`, any key you leave out takes its perfect value: no noise
 and zero duration. In YAML, write exponents with a sign (`3.6e+12`).
+
+### Checks before the run
+
+The plugin's `configure` refuses, before any rank is traced:
+
+- a typo or a bad value in `plugin_config`;
+- `hardware` other than `generic`, because SquidASM builds those nodes with a
+  device of its own that the plugin does not replace;
+- `formalism: stab`, which cannot hold the mixed states of noisy colour
+  centres;
+- `t1`, `t2` or `gate_fidelity`, which would be ignored because the noise
+  comes from the `device` block;
+- `link_fidelity` together with the heralded link, which would also be
+  ignored.
+
+It runs on the NetQASM backend only; `--aer --plugin nv_2026` is refused.
+
+### Metrics
+
+With the heralded link, the plugin reports what the links delivered in
+`comm.metrics["plugin"]`, which `--metrics FILE` writes to JSON. The counts
+cover every link and every shot of the run:
+
+| Key | Meaning |
+|---|---|
+| `epr_pairs` | Pairs delivered |
+| `epr_attempts` | Attempts made to deliver them, the successful ones included |
+| `pair_fidelity` | Mean fidelity of the heralded pairs to their Bell state, before nuclear dephasing |
+| `pair_time_ns` | Generation time of each pair, in delivery order |
+
+NetQMPI adds the simulated time of each shot in
+`comm.metrics["netqmpi"]["sim_time_ns"]`. With NetQMPI's own links the plugin
+reports nothing.
 
 ## What is reproduced
 
@@ -131,12 +168,22 @@ master) and compared with the plugin:
   noise source at a time. The probability of arriving intact and the number
   of attempts per pair agree within sampling error.
 
+## Checked on NetQMPI alone
+
+- **Telegates**: `expose`/`unexpose` were checked on an ideal device, with
+  both NetQMPI's links and a perfect heralded link (`tests/`). The remote
+  CNOT reproduces its truth table, and `unexpose` restores the phase of a
+  control in |+⟩. One root exposing to two receivers flips both targets.
+- **Link metrics** on the presets: the measured cycle time (13.23 µs) and
+  heralded fidelity (NV 0.5865, SnV 0.7758) equal the double-click model's.
+  The attempts per pair agree with 1/p within sampling error: about
+  1.58 million for NV and 4,379 for SnV.
+
 ## Not yet covered
 
 - **Arbitrary angles.** NetQASM encodes a rotation as n·π/2^d. Multiples of
   π/4 are exact, but any other angle (for example the phases of `Long`,
   DEGGA, or DEGA with 3-bit chunks) is split into several rotations, and each
   one adds gate noise and time.
-- **Remote gates (`telegate.py`).** NetQMPI's `expose`/`unexpose` are not
-  implemented on the NetQASM backend yet
-  ([NetQIR/netqmpi#31](https://github.com/NetQIR/netqmpi/issues/31)).
+- **Telegates against the NetSquid code.** `examples/telegate.py` has not
+  yet been compared with `telegate.py` of the original emulator under noise.

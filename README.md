@@ -8,7 +8,7 @@ characterised platform by changing its configuration.
 
 | Plugin | Directory | Entry points | Backend |
 |---|---|---|---|
-| NV / SnV colour centres, heralded double-click links | [`color-centers/`](color-centers) | `nv_2026`, `snv_2026`, `color_centers` | NetQASM (SquidASM 0.13.6, NetQASM 2.0) |
+| NV / SnV colour centres, heralded double-click links, telegates, link metrics | [`color-centers/`](color-centers) | `nv_2026`, `snv_2026`, `color_centers` | NetQASM (SquidASM 0.13.6, NetQASM 2.0) |
 
 ## Layout
 
@@ -35,8 +35,14 @@ the plugin you use.
   `netqmpi-<platform>` and the import package is `netqmpi_<platform>`.
 - **Entry points.** Each plugin declares its entry points in the
   `netqmpi.plugins` group, one per characterised platform, for example
-  `nv_2026`. Once [NetQIR/netqmpi#29](https://github.com/NetQIR/netqmpi/issues/29)
-  lands, NetQMPI resolves them by short name (`--plugin nv_2026`).
+  `nv_2026`. NetQMPI resolves them by short name (`--plugin nv_2026`), and
+  `netqmpi --list-plugins` lists them.
+- **Protocol.** Each entry point declares `backends`, sets the run settings
+  its platform needs in `run_defaults`, and refuses bad parameters or
+  incompatible settings in `configure`, before anything is traced (see the
+  [plugin guide](https://netqir.github.io/netqmpi/backends/netqasm-plugins.html)).
+- **Metrics.** What a plugin measures (pairs, attempts, fidelity) is yielded
+  by its context manager under NetQMPI's common key names.
 - **Presets.** A characterised parameter set ships inside the package, and
   its `plugin_config` only carries overrides. A generic entry point takes
   every parameter, for platforms of your own.
@@ -51,19 +57,15 @@ NetSquid come from the NetSquid index:
 ```bash
 conda activate netqasm2
 pip install -e color-centers --no-deps     # deps are already in netqasm2
+netqmpi --list-plugins
 ```
 
-Then name it in the `netqasm` block of the config file:
-
-```yaml
-netqasm:
-  formalism: dm
-  num_qubits: 3
-  plugin: netqmpi_colorcenters:nv_2026
-```
+Then select it by name, on the command line or in the `netqasm` block of a
+config file:
 
 ```bash
-netqmpi -n 2 app.py --netqasm --config config.yaml
+netqmpi -n 2 app.py --netqasm --plugin nv_2026
+netqmpi -n 2 app.py --netqasm --plugin nv_2026 --plugin-config overrides.yaml --metrics metrics.json
 ```
 
 ## Adding a plugin
@@ -79,8 +81,8 @@ netqmpi -n 2 app.py --netqasm --config config.yaml
 
 ## Status
 
-Simulation plugins are in NetQMPI `main` (9221dfe) but not in a release yet.
-Related NetQMPI issues:
+Simulation plugins are in NetQMPI `main` but not in a release yet. These
+NetQMPI issues are what this repository builds on, all merged:
 
 - [#29](https://github.com/NetQIR/netqmpi/issues/29): short names, the
   `--plugin` flag, run-config defaults, and refusal on unsupported backends.

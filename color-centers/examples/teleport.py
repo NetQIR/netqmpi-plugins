@@ -8,10 +8,9 @@ calls the backend runs the teledata protocol over the plugin's heralded link
 (entanglement.py in the original emulator): an electron-electron pair, a Bell
 measurement on rank 0 and the corrections on rank 1.
 
-Run from the plugin directory (color-centers/), with the plugin installed:
+Run with the plugin installed:
 
-    netqmpi -n 2 examples/teleport.py --netqasm \\
-        --config examples/snv_2026.yaml
+    netqmpi -n 2 examples/teleport.py --netqasm --plugin snv_2026
 
 The state is |1> by default; TELEPORT_STATE picks 0, 1, + or -. A
 superposition shows how much phase the nuclear spin loses while the pair is

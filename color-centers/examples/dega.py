@@ -12,10 +12,9 @@ is MultiCPhase2 from primitives.py written with rz and cx, so with the
 colour-centre plugin every rank runs the very physical instructions the
 NetSquid version does.
 
-Run from the plugin directory (color-centers/), with the plugin installed:
+Run with the plugin installed:
 
-    netqmpi -n 2 examples/dega.py --netqasm \\
-        --config examples/nv_2026.yaml
+    netqmpi -n 2 examples/dega.py --netqasm --plugin nv_2026
 
 The marked state defaults to 1010 (two ranks) and can be changed with the
 DEGA_MARKED_STATE environment variable; it needs 2 bits per rank.

@@ -47,6 +47,19 @@ class ColorCenterExecutor(VanillaNetSquidExecutor):
                 return position
         raise RuntimeError("No more qubits left in qdevice")
 
+    def _clear_phys_qubit_in_memory(self, physical_address: int) -> None:
+        # SquidASM frees a position by lowering its in_use flag and leaves the
+        # freed qubit in it. This executor moves qubits through the electron:
+        # measuring a nuclear spin swaps it there and back, and so does a CNOT
+        # between two nuclear spins. Swapping a leftover qubit into the
+        # electron raises the electron's in_use flag again, so the link layer
+        # takes it for busy and waits forever for it to be freed: a telegate
+        # hung on its second shot. Remove the freed qubit, so that a free
+        # position is an empty one.
+        if self.qdevice.peek(physical_address)[0] is not None:
+            self.qdevice.discard(physical_address)
+        super()._clear_phys_qubit_in_memory(physical_address)
+
     def _run(self, program: QuantumProgram) -> Generator[EventExpression, None, None]:
         if self.qdevice.busy:
             yield EventExpression(source=self.qdevice, event_type=self.qdevice.evtype_program_done)

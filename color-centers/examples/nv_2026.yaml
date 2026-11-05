@@ -1,17 +1,22 @@
 # NetQMPI configuration: NV-centre QPUs with the COMPUTAEX 2026 parameters.
 #
-# The parameters are the preset nv_2026 shipped with the plugin
-# (src/netqmpi_colorcenters/presets/nv_2026.yaml); this file only picks it and
-# sets what NetQMPI itself needs for this platform.
+# With the plugin installed, a config file is optional:
+#
+#   netqmpi -n 2 examples/dega.py --netqasm --plugin nv_2026
+#
+# does the same. The parameters are the preset nv_2026 shipped with the plugin
+# (src/netqmpi_colorcenters/presets/nv_2026.yaml), and the plugin sets the run
+# settings it was characterised with (run_defaults): formalism dm and
+# num_qubits 3, an electron and two nuclear spins. Use a file to set shots,
+# override those settings, or override single parameters of the preset:
 #
 #   netqmpi -n 2 examples/dega.py --netqasm --config examples/nv_2026.yaml
 
 shots: 200               # ~0.5 s per shot with two ranks; override with --shots
 
 netqasm:
-  formalism: dm          # as the NetSquid emulator (primitives.py sets QFormalism.DM)
-  num_qubits: 3          # electron + 2 nuclear spins, i.e. NVProcessor2026(3)
-  plugin: netqmpi_colorcenters:nv_2026
+  plugin: nv_2026           # short name of the installed plugin
+  # num_qubits: 4        # e.g. one more nuclear spin than the preset assumes
 
   # Optional overrides of the preset, block by block:
   # plugin_config:
