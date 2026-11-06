@@ -1,21 +1,21 @@
-# NetQMPI configuration: SnV-centre QPUs with the COMPUTAEX 2026 parameters.
+# NetQMPI configuration: NV-centre QPUs with the COMPUTAEX 2026 parameters.
 #
 # With the plugin installed, a config file is optional:
 #
-#   netqmpi -n 2 examples/teleport.py --netqasm --plugin snv_2026
+#   netqmpi -n 2 examples/dega.py --netqasm --plugin nv_2026
 #
-# does the same. The parameters are the preset snv_2026 shipped with the plugin
-# (src/netqmpi_colorcenters/presets/snv_2026.yaml), and the plugin sets the run
+# does the same. The parameters are the preset nv_2026 shipped with the plugin
+# (src/netqmpi_plugins/colorcenters/presets/nv_2026.yaml), and the plugin sets the run
 # settings it was characterised with (run_defaults): formalism dm and
 # num_qubits 3, an electron and two nuclear spins. Use a file to set shots,
 # override those settings, or override single parameters of the preset:
 #
-#   netqmpi -n 2 examples/teleport.py --netqasm --config examples/snv_2026.yaml
+#   netqmpi -n 2 examples/dega.py --netqasm --config examples/nv_2026.yaml
 
 shots: 200               # ~0.5 s per shot with two ranks; override with --shots
 
 netqasm:
-  plugin: snv_2026           # short name of the installed plugin
+  plugin: nv_2026           # short name of the installed plugin
   # num_qubits: 4        # e.g. one more nuclear spin than the preset assumes
 
   # Optional overrides of the preset, block by block:

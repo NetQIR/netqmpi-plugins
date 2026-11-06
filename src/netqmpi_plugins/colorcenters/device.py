@@ -16,7 +16,7 @@ from netsquid.components.models import DepolarNoiseModel, T1T2NoiseModel
 from netsquid.components.qprocessor import PhysicalInstruction, QuantumProcessor
 from netsquid.qubits.operators import Operator
 
-from netqmpi_colorcenters.parameters import DeviceParameters
+from netqmpi_plugins.colorcenters.parameters import DeviceParameters
 
 #: Memory position of the electron spin, the communication qubit. The
 #: nuclear spins follow it.

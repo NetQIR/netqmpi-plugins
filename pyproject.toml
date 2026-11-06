@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "netqmpi-plugins"
+version = "0.1.0"
+description = "Hardware and link models for NetQMPI, as simulation plugins: NV and SnV colour centres with heralded double-click links"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+requires-python = ">=3.9"
+authors = [{ name = "F. Javier Cardama", email = "javier.cardama@usc.es" }]
+keywords = ["quantum", "distributed quantum computing", "quantum networks", "NetQMPI",
+            "SquidASM", "NetSquid", "colour centres", "NV centre", "SnV centre"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+# Simulation plugins are in NetQMPI from 0.4.0 on. The code of every plugin is
+# always installed; the simulator stack of each plugin comes with its extra.
+dependencies = [
+    "netqmpi>=0.4.0",
+    "pyyaml>=5.1",
+]
+
+[project.optional-dependencies]
+# SquidASM and NetSquid come from the NetSquid index (pypi.netsquid.org):
+#   pip install "netqmpi-plugins[colorcenters]" --extra-index-url https://pypi.netsquid.org
+# The version floor keeps pip off the empty `squidasm` 0.0.1 on PyPI.
+colorcenters = [
+    "squidasm>=0.13.6,<0.14",
+    "netsquid>=1.1,<2",
+    "netsquid-magic>=16,<17",
+    "numpy",
+]
+# Every plugin that can be installed together with the others. A plugin on
+# another simulator stack (e.g. Qoala, which needs netsquid-magic 14) gets
+# its own extra and stays out of `all`.
+all = ["netqmpi-plugins[colorcenters]"]
+test = ["pytest>=7.0"]
+
+[project.urls]
+Homepage = "https://github.com/NetQIR/netqmpi-plugins"
+Source = "https://github.com/NetQIR/netqmpi-plugins"
+Issues = "https://github.com/NetQIR/netqmpi-plugins/issues"
+Changelog = "https://github.com/NetQIR/netqmpi-plugins/blob/main/CHANGELOG.md"
+NetQMPI = "https://github.com/NetQIR/netqmpi"
+Documentation = "https://netqir.github.io/netqmpi/backends/netqasm-plugins.html"
+
+# Short names for `netqmpi --plugin NAME`, one per characterised platform.
+[project.entry-points."netqmpi.plugins"]
+nv_2026 = "netqmpi_plugins.colorcenters:nv_2026"
+snv_2026 = "netqmpi_plugins.colorcenters:snv_2026"
+color_centers = "netqmpi_plugins.colorcenters:simulation"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"netqmpi_plugins.colorcenters" = ["presets/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["colorcenters/tests"]

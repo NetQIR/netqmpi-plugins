@@ -1,9 +1,9 @@
 # Preset snv_2026: SnV-centre QPUs with the COMPUTAEX 2026 parameters.
 #
-# The plugin_config of netqmpi_colorcenters:simulation, copied key by key from
+# The plugin_config of netqmpi_plugins.colorcenters:simulation, copied key by key from
 # SnVParameterSet2026COMPUTAEX (snv_2026.py) of the original NetSquid emulator:
 # device = SnVProcessor2026 (processors.py), link = Entangler (entanglement.py).
-# Select it as plugin "netqmpi_colorcenters:snv_2026"; its plugin_config then only
+# Select it as plugin "netqmpi_plugins.colorcenters:snv_2026"; its plugin_config then only
 # carries overrides of these values.
 #
 # Times in ns. Gate errors are the depolar_rate of a time-independent

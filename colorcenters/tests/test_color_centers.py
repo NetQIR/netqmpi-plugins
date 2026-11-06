@@ -1,7 +1,7 @@
 """
 Tests of the color_centers plugin, on NetQMPI's NetQASM backend.
 
-Run from the plugin directory:  python -m pytest
+Run from the repository root:  python -m pytest
 
 The simulations use an ideal device or one with a single deliberate error,
 so every outcome they check is certain.
@@ -20,16 +20,16 @@ from netqmpi.runtime.adapters.netqasm import NetQASMExecutorAdapter, NetQASMRunC
 from netqmpi.runtime.run_config import read_config_block  # noqa: E402
 from netqmpi.sdk.environment import Environment  # noqa: E402
 
-import netqmpi_colorcenters as color_centers  # noqa: E402
-from netqmpi_colorcenters import link  # noqa: E402
+import netqmpi_plugins.colorcenters as color_centers  # noqa: E402
+from netqmpi_plugins.colorcenters import link  # noqa: E402
 
-PLUGIN = "netqmpi_colorcenters:simulation"
+PLUGIN = "netqmpi_plugins.colorcenters:simulation"
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 
 
 def _installed(name):
     from netqmpi import plugins
-    return any(p.name == name and p.distribution == "netqmpi-colorcenters"
+    return any(p.name == name and p.distribution == "netqmpi-plugins"
                for p in plugins.installed())
 SHOTS = 3
 
@@ -163,11 +163,11 @@ def test_every_entry_point_declares_the_netqasm_backend():
 ])
 def test_configure_refuses_what_the_plugin_would_ignore(settings, match):
     with pytest.raises(ValueError, match=match):
-        NetQASMRunConfig(**{"plugin": "netqmpi_colorcenters:nv_2026", **settings})
+        NetQASMRunConfig(**{"plugin": "netqmpi_plugins.colorcenters:nv_2026", **settings})
 
 
 def test_link_fidelity_is_fine_without_the_heralded_link():
-    config = NetQASMRunConfig(plugin="netqmpi_colorcenters:nv_2026", link_fidelity=0.9,
+    config = NetQASMRunConfig(plugin="netqmpi_plugins.colorcenters:nv_2026", link_fidelity=0.9,
                               plugin_config={"link": None})
     assert config.link_fidelity == 0.9
 

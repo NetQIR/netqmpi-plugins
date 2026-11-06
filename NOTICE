@@ -1,0 +1,9 @@
+netqmpi-plugins
+Copyright 2026 F. Javier Cardama and the NetQMPI contributors
+
+The colorcenters plugin ports the NV and SnV colour-centre model of
+Diamond-color-centers-emulation-on-NetSquid
+(https://github.com/rodrigt11/Diamond-color-centers-emulation-on-NetSquid),
+by the COMPUTAEX authors: its processor definitions, gate primitives,
+entanglement model and 2026 parameter sets (NVParameterSet2026COMPUTAEX,
+SnVParameterSet2026COMPUTAEX), rebuilt on SquidASM.

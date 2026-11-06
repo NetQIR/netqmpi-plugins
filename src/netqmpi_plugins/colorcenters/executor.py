@@ -34,7 +34,7 @@ from netsquid.components.qprogram import QuantumProgram
 from pydynaa import EventExpression
 from squidasm.nqasm.executor.vanilla import VanillaNetSquidExecutor
 
-from netqmpi_colorcenters.device import ELECTRON
+from netqmpi_plugins.colorcenters.device import ELECTRON
 
 
 class ColorCenterExecutor(VanillaNetSquidExecutor):

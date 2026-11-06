@@ -24,7 +24,7 @@ A NetQMPI simulation plugin with three entry points, registered in the
 Each follows NetQMPI's plugin protocol: ``backends`` (NetQASM only),
 ``run_defaults``, and ``configure``, which refuses settings of the
 ``netqasm`` block the plugin would ignore. With a heralded link, the context
-manager yields a :class:`~netqmpi_colorcenters.link.LinkStats`, so the run
+manager yields a :class:`~netqmpi_plugins.colorcenters.link.LinkStats`, so the run
 reports its pairs in ``comm.metrics["plugin"]``.
 
 SquidASM has no hook for a device, an executor or a link of its own, so the
@@ -44,14 +44,25 @@ from importlib import resources
 from typing import Any, Dict, Iterator, Mapping, Optional, Tuple
 
 import yaml
+
+try:
+    import netsquid  # noqa: F401
+    import netsquid_magic  # noqa: F401
+    import squidasm  # noqa: F401
+except ImportError as error:  # pragma: no cover - depends on the environment
+    raise ImportError(
+        f"the colorcenters plugin needs SquidASM, NetSquid and netsquid-magic ({error}). "
+        "Install them with: pip install 'netqmpi-plugins[colorcenters]' "
+        "--extra-index-url https://pypi.netsquid.org") from error
+
 from netqasm.lang.instr.flavour import VanillaFlavour
 from squidasm.nqasm.qnodeos import SubroutineHandler
 from squidasm.sim.network import network
 
-from netqmpi_colorcenters.device import ELECTRON, build_qdevice
-from netqmpi_colorcenters.executor import ColorCenterExecutor
-from netqmpi_colorcenters.link import ElectronLinkLayer, LinkStats, build_distributor
-from netqmpi_colorcenters.parameters import DeviceParameters, LinkParameters
+from netqmpi_plugins.colorcenters.device import ELECTRON, build_qdevice
+from netqmpi_plugins.colorcenters.executor import ColorCenterExecutor
+from netqmpi_plugins.colorcenters.link import ElectronLinkLayer, LinkStats, build_distributor
+from netqmpi_plugins.colorcenters.parameters import DeviceParameters, LinkParameters
 
 __all__ = ["simulation", "nv_2026", "snv_2026", "ColorCenters", "Preset", "load_preset",
            "DeviceParameters", "LinkParameters", "LinkStats", "ELECTRON"]

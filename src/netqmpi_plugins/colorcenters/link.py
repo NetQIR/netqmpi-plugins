@@ -36,8 +36,8 @@ from netsquid_magic.magic_distributor import DoubleClickMagicDistributor
 from netsquid_magic.model_parameters import DoubleClickModelParameters
 from squidasm.sim.network.network import MagicNetworkLayerProtocol
 
-from netqmpi_colorcenters.device import ELECTRON
-from netqmpi_colorcenters.parameters import LinkParameters
+from netqmpi_plugins.colorcenters.device import ELECTRON
+from netqmpi_plugins.colorcenters.parameters import LinkParameters
 
 
 class ElectronLinkLayer(MagicNetworkLayerProtocol):

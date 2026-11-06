@@ -1,4 +1,4 @@
-# netqmpi-colorcenters
+# Colour-centre plugin (`netqmpi_plugins.colorcenters`)
 
 NV and SnV colour-centre QPUs with heralded double-click links, as a NetQMPI
 simulation plugin for the NetQASM/SquidASM backend.
@@ -11,14 +11,14 @@ parameter sets are rebuilt on SquidASM. File names below (`processors.py`,
 that repository.
 
 ```
-color-centers/
-├── src/netqmpi_colorcenters/
-│   ├── __init__.py         # entry points: nv_2026, snv_2026, color_centers
-│   ├── parameters.py       # the device and link blocks of plugin_config
-│   ├── device.py           # the processor: processors.py
-│   ├── executor.py         # gate by gate: primitives.py
-│   ├── link.py             # heralded double-click pairs: entanglement.py
-│   └── presets/            # nv_2026.yaml, snv_2026.yaml
+src/netqmpi_plugins/colorcenters/
+├── __init__.py             # entry points: nv_2026, snv_2026, color_centers
+├── parameters.py           # the device and link blocks of plugin_config
+├── device.py               # the processor: processors.py
+├── executor.py             # gate by gate: primitives.py
+├── link.py                 # heralded double-click pairs: entanglement.py
+└── presets/                # nv_2026.yaml, snv_2026.yaml
+colorcenters/
 ├── examples/
 │   ├── dega.py             # DEGA.py (2-bit chunks), one rank per QPU
 │   ├── teleport.py         # qsend/qrecv between two QPUs over the heralded link
@@ -30,19 +30,20 @@ color-centers/
 
 ## Running
 
-You need NetQMPI `main` with plugin support (not in a release yet), SquidASM
-0.13.6 and NetQASM 2.0, all of which the `netqasm2` environment has. Install
-the plugin so NetQMPI finds it by name, from any directory:
+Install the plugin with its extra (NetQMPI 0.4.0 or later, SquidASM 0.13.6,
+NetQASM 2.0); SquidASM and NetSquid come from the NetSquid index:
 
 ```bash
-conda activate netqasm2
-pip install -e . --no-deps
+pip install "netqmpi-plugins[colorcenters]" --extra-index-url https://pypi.netsquid.org
 netqmpi --list-plugins
+```
 
+Then, from this directory:
+
+```bash
 netqmpi -n 2 examples/dega.py --netqasm --plugin nv_2026
 TELEPORT_STATE=+ netqmpi -n 2 examples/teleport.py --netqasm --plugin snv_2026
 netqmpi -n 2 examples/telegate.py --netqasm --plugin nv_2026 --metrics metrics.json
-python -m pytest
 ```
 
 SquidASM simulates the whole network once per shot, which takes about half a
@@ -55,9 +56,9 @@ them.
 
 | Short name | Target | `plugin_config` |
 |---|---|---|
-| `nv_2026` | `netqmpi_colorcenters:nv_2026` | Optional overrides of the NV preset (`NVParameterSet2026COMPUTAEX`) |
-| `snv_2026` | `netqmpi_colorcenters:snv_2026` | Optional overrides of the SnV preset (`SnVParameterSet2026COMPUTAEX`) |
-| `color_centers` | `netqmpi_colorcenters:simulation` | Every parameter: a `device` block and an optional `link` block |
+| `nv_2026` | `netqmpi_plugins.colorcenters:nv_2026` | Optional overrides of the NV preset (`NVParameterSet2026COMPUTAEX`) |
+| `snv_2026` | `netqmpi_plugins.colorcenters:snv_2026` | Optional overrides of the SnV preset (`SnVParameterSet2026COMPUTAEX`) |
+| `color_centers` | `netqmpi_plugins.colorcenters:simulation` | Every parameter: a `device` block and an optional `link` block |
 
 The presets set the run settings the platform was characterised with
 (`run_defaults`): `formalism: dm`, and `num_qubits: 3`, an electron and two
@@ -167,6 +168,15 @@ master) and compared with the plugin:
   covered |1⟩ and |+⟩, NV and SnV, plus variants that switch on one link
   noise source at a time. The probability of arriving intact and the number
   of attempts per pair agree within sampling error.
+- **Telegates**: `telegate.py` and `examples/telegate.py` run different
+  physical protocols for the same remote CNOT, so their outcomes are not
+  expected to agree. `telegate.py` moves each half of the pair to a nuclear
+  spin and routes every CNOT through the electron (12 SWAPs, and no
+  cat-disentangler); the plugin keeps both halves on the electrons (4 SWAPs,
+  all of them in the final readout). On computational-basis inputs, the
+  plugin's telegate is right more often on NV for every input; on SnV it is
+  less often right when the control is |1⟩, because its shot is about 90 ms
+  longer (one more 50 ms readout) and T1 relaxes |1⟩.
 
 ## Checked on NetQMPI alone
 
@@ -185,5 +195,3 @@ master) and compared with the plugin:
   π/4 are exact, but any other angle (for example the phases of `Long`,
   DEGGA, or DEGA with 3-bit chunks) is split into several rotations, and each
   one adds gate noise and time.
-- **Telegates against the NetSquid code.** `examples/telegate.py` has not
-  yet been compared with `telegate.py` of the original emulator under noise.
